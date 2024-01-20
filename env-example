@@ -1,0 +1,10 @@
+# Local Directory
+INPUT_DIR='Where A1111 Saves files'
+OUTPUT_DIR='Temp directory for working with images'
+
+# DEBUG, INFO
+LOGGING_LEVEL=DEBUG
+
+# Your Ghost Blog
+GHOST_BLOG_URL='https://example-blog.com'
+GHOST_ADMIN_API_KEY='super secret'
