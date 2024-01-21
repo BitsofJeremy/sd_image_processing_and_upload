@@ -1,4 +1,11 @@
-.idea
+input_directory/
+output_directory/
+archive_directory/
+.idea/
+
+*.txt
+*.log
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
