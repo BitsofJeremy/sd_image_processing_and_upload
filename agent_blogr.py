@@ -28,8 +28,8 @@ def agent_generate(_image, _gen_info):
 
     article_prompt = f"""
         You are a professional magazine writer for a luxury AI art publication. 
-        Write a short engaging article based on this picture.
-        The following data only for your reference on how the image was created do NOT add it to your article: 
+        Write a short engaging blog article based on this picture.
+        Use the following data only for your reference on how the image was created do NOT add it to your article: 
         {_gen_info}
     """
     article = generate(
@@ -42,11 +42,7 @@ def agent_generate(_image, _gen_info):
     article_title = f"""
            You are a professional magazine writer for a luxury AI art publication. 
            Write ONLY a short engaging blog TITLE for the article. 
-           It should only be the length of a tweet, no more.
-           This is the article that needs a title for you to reference: {article['response']} 
-           Refer to the image for context.
-           The following data only for your reference on how the image was created do NOT add it to your title: 
-           {_gen_info}
+           This is the article that needs a TITLE for you to reference: {article['response']} 
        """
     title = generate(
         model=model,
@@ -57,7 +53,7 @@ def agent_generate(_image, _gen_info):
     logging.info(title['response'].replace('"','').strip())
 
     article_dict = {
-        "title": title['response'].replace('"','').strip(),
+        "title": title['response'][:180].replace('"','').strip(),
         "article": article['response'].lstrip()
     }
     return article_dict

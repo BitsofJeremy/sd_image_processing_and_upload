@@ -150,7 +150,7 @@ def main():
                 "html": f"{post_dict['article']}<br/><br/>"
                         f"<p><code>{generation_data}</code></p><br/>"
                         f"<p>{tag_line}</p>",
-                "feature_image": image_url,
+                "feature_image": image_url
             }
             posted = add_post(_post_data=post_data)
 
