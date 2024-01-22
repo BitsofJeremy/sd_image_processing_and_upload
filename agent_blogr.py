@@ -27,10 +27,8 @@ def agent_generate(_image, _gen_info):
         image_data = image_file.read()
 
     article_prompt = f"""
-        You are a professional magazine writer for a luxury AI art publication. 
-        Write a short engaging blog article based on this picture.
-        Use the following data only for your reference on how the image was created do NOT add it to your article: 
-        {_gen_info}
+        write a short engaging article about this picture.
+        You can use the following generation data for your reference on how the image was created.  {_gen_info}
     """
     article = generate(
         model=model,
@@ -40,9 +38,7 @@ def agent_generate(_image, _gen_info):
     )
     logging.info(article['response'].lstrip())
     article_title = f"""
-           You are a professional magazine writer for a luxury AI art publication. 
-           Write ONLY a short engaging blog TITLE for the article. 
-           This is the article that needs a TITLE for you to reference: {article['response']} 
+           write a short engaging CAPTION for this picture. 
        """
     title = generate(
         model=model,
