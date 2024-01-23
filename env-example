@@ -2,6 +2,7 @@
 INPUT_DIR='Where A1111 Saves files'
 OUTPUT_DIR='Temp directory for working with images'
 ARCHIVE_DIR='A place for your archived images'
+WATERMARK_PATH='Add a transparent PNG for a watermark'
 
 # Sometimes you need a tag line for the end of your posts
 TAGLINE="I Like Turtles"
@@ -12,3 +13,4 @@ OLLAMA_MODEL='llava'
 # Your Ghost Blog
 GHOST_BLOG_URL='https://example-blog.com'
 GHOST_ADMIN_API_KEY='super secret'
+GHOST_API_KEY='super secret'

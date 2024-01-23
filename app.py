@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import jwt
 import logging
 import os
-from PIL import Image
+from PIL import Image, ImageDraw, ImageOps
 import requests
 import shutil
 # Local Imports
@@ -26,6 +26,8 @@ logging.basicConfig(
 input_directory = os.path.abspath(os.getenv('INPUT_DIR'))
 output_directory = os.path.abspath(os.getenv('OUTPUT_DIR'))
 archive_directory = os.path.abspath(os.getenv('ARCHIVE_DIR'))
+# Watermark image path
+watermark_path = os.path.abspath(os.getenv('WATERMARK_PATH'))
 # Ghost API information
 api_token = os.getenv('GHOST_ADMIN_API_KEY')
 blog_domain = os.getenv('GHOST_BLOG_URL')
@@ -100,7 +102,30 @@ def main():
             # JPG filename and path
             jpg_filename = f"{base_filename}.jpeg"
             jpg_path = os.path.join(output_directory, jpg_filename)
-            Image.open(os.path.join(input_directory, filename)).convert("RGB").save(jpg_path)
+
+            # Open the image and convert to RGBA
+            original_image = Image.open(os.path.join(input_directory, filename)).convert("RGBA")
+
+            # Resize the watermark to 120x120 pixels
+            watermark = Image.open(watermark_path).resize((120, 120))
+
+            # Create a transparent layer for the watermark
+            watermark_layer = Image.new("RGBA", original_image.size, (0, 0, 0, 0))
+
+            # Paste the watermark onto the transparent layer in the bottom right
+            watermark_layer.paste(watermark, (original_image.width - 120, original_image.height - 120), mask=watermark)
+
+            # Convert the original image to RGBA mode
+            original_image = original_image.convert("RGBA")
+
+            # Composite the original image and the watermark layer
+            watermarked_image = Image.alpha_composite(original_image, watermark_layer)
+
+            # Convert the image back to RGB mode before saving as JPEG
+            watermarked_image = watermarked_image.convert("RGB")
+
+            # Save the result as a JPG
+            watermarked_image.save(jpg_path, "JPEG")
 
             # Copy associated TXT file to the output directory
             txt_filename = f"{base_filename}.txt"
