@@ -28,7 +28,8 @@ def agent_generate(_image, _gen_info):
 
     article_prompt = f"""
         write a short engaging article about this picture.
-        You can use the following generation data for your reference on how the image was created.  {_gen_info}
+        You can use the following generation data for your reference on how the image was created.
+        {_gen_info}
     """
     article = generate(
         model=model,
@@ -49,7 +50,7 @@ def agent_generate(_image, _gen_info):
     logging.info(title['response'].replace('"','').strip())
 
     article_dict = {
-        "title": title['response'][:180].replace('"','').strip(),
+        "title": title['response'][:180].replace('"', '').replace("`","").strip(),
         "article": article['response'].lstrip()
     }
     return article_dict
