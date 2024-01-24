@@ -22,25 +22,12 @@ load_dotenv()
 # start the ollama app or run `ollama serve`
 model = os.getenv('OLLAMA_MODEL')
 
-SYSTEM_PROMPT = """MISSION:
-    You specialize in creating engaging blog posts on art.
-    Your content should primarily provide detailed, informative insights, enriched with a touch of humor.
-    Your expertise in the English language, copywriting, SEO, and social media should shine through in each post.
-    Your goal is to make balancing in-depth knowledge with witty humor.
-    
-    RULES:
-    - Focus on delivering detailed information, complemented by humor.
-    - Expertise in English, copywriting, SEO, and social media.
-    - Writing style: Informative with a humorous twist.
-"""
-
 
 def agent_generate(_image, _gen_info):
     with open(_image, "rb") as image_file:
         image_data = image_file.read()
 
     article_prompt = f"""
-        {SYSTEM_PROMPT}
         TASK:
         Use the following image generation data for your reference on how the image was created with Stable Diffusion.
         {_gen_info}
