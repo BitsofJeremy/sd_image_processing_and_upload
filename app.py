@@ -67,7 +67,8 @@ def add_post(_post_data):
                 "tags": _post_data['tags'],
                 "html": _post_data["html"],
                 "feature_image": _post_data["feature_image"],
-                "status": "published"
+                "status": "published",
+                "published_at": _post_data['published_at']
             }
         ]
     }
@@ -86,7 +87,6 @@ def add_post(_post_data):
 
 
 def main():
-
     # Step 1: Convert PNG to JPG and Move Associated Text Files
     # Check if the output directory exists, create if not
     if not os.path.exists(output_directory):
@@ -95,6 +95,12 @@ def main():
     # Loop through PNG images in the input directory
     for filename in os.listdir(input_directory):
         if filename.endswith(".png"):
+            # Get the last modification time of the original PNG file
+            image_path = os.path.join(input_directory, filename)
+            image_datestamp = os.path.getmtime(image_path)
+            # Convert Unix timestamp to datetime string in the required format
+            image_datestamp = date.utcfromtimestamp(image_datestamp).strftime('%Y-%m-%dT%H:%M:%S.000Z')
+
             # Convert PNG to JPG
             post_title = os.path.splitext(filename)[0][:16]  # Extract the first 16 characters as post title
             base_filename = f"{post_title}"
@@ -104,7 +110,7 @@ def main():
             jpg_path = os.path.join(output_directory, jpg_filename)
 
             # Open the image and convert to RGBA
-            original_image = Image.open(os.path.join(input_directory, filename)).convert("RGBA")
+            original_image = Image.open(image_path).convert("RGBA")
 
             # Resize the watermark to 120x120 pixels
             watermark = Image.open(watermark_path).resize((120, 120))
@@ -133,19 +139,9 @@ def main():
             if os.path.exists(txt_path):
                 shutil.copy(txt_path, os.path.join(output_directory, txt_filename))
 
-    # Step 2: Upload JPG images to Ghost Blog API and Create Blog Posts
-
-    # Loop through JPG images in the output directory
-    for filename in os.listdir(output_directory):
-        if filename.endswith(".jpeg"):
-            post_title = os.path.splitext(filename)[0][:16]  # Extract the first 16 characters as post title
-            base_filename = f"{post_title}"
-            # JPG filename and path
-            jpg_filename = f"{base_filename}.jpeg"
             # Upload image to Ghost API
-            image_path = os.path.join(output_directory, filename)
-            files = {'file': (jpg_filename, open(image_path, 'rb'), 'image/jpeg')}
-            # Change version to your. correct Ghost install version
+            files = {'file': (jpg_filename, open(jpg_path, 'rb'), 'image/jpeg')}
+            # Change version to your correct Ghost install version
             jwt_token = get_jwt()
             headers = {
                 "Authorization": f"Ghost {jwt_token}",
@@ -156,7 +152,7 @@ def main():
             image_url = response.json()["images"][0]["url"]
 
             # Read text data from associated text file
-            txt_path = os.path.join(output_directory, os.path.splitext(filename)[0] + ".txt")
+            txt_path = os.path.join(output_directory, os.path.splitext(jpg_filename)[0] + ".txt")
             if os.path.exists(txt_path):
                 with open(txt_path, 'r') as txt_file:
                     generation_data = txt_file.read()
@@ -166,18 +162,24 @@ def main():
             # Create a post with local AI
             post_dict = agent_generate(_image=image_path, _gen_info=generation_data)
             logging.info(post_dict)
-
+            tags = ["ai_art"]
+            # tags.extend(post_dict['tags'])
             # Create Ghost post JSON
             tag_line = os.getenv('TAGLINE')
             post_data = {
                 "title": post_dict['title'],
-                "tags": ["ai_art"],
+                "tags": tags,
                 "html": f"{post_dict['article']}<br/><br/>"
                         f"<p><code>{generation_data}</code></p><br/>"
                         f"<p>{tag_line}</p>",
-                "feature_image": image_url
+                "feature_image": image_url,
+                "published_at": image_datestamp
             }
             posted = add_post(_post_data=post_data)
+            if posted:
+                logging.info(f"POSTED ARTICLE: {post_title}")
+            else:
+                logging.info("POST FAILED, SORRY!!")
 
     # Check if the archive directory exists, create if not
     if not os.path.exists(archive_directory):
@@ -202,7 +204,6 @@ def main():
                 os.rmdir(file_path)
         except Exception as e:
             logging.info(f"Error cleaning up file or directory {file_path}: {e}")
-
     logging.info("Finished")
 
 
