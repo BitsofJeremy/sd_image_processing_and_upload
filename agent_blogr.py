@@ -1,6 +1,5 @@
 
 from dotenv import load_dotenv
-import json
 import logging
 from ollama import generate
 import os
@@ -26,9 +25,11 @@ model = os.getenv('OLLAMA_MODEL')
 def agent_generate(_image, _gen_info):
     with open(_image, "rb") as image_file:
         image_data = image_file.read()
+    # This is the prompt for your titles
     article_title = f"""
            write a short Instagram caption for this image.
        """
+    # Generate your title
     title = generate(
         model=model,
         prompt=article_title,
@@ -36,7 +37,9 @@ def agent_generate(_image, _gen_info):
         stream=False
     )
     logging.info(title['response'].replace('"','').strip())
-
+    # Return a nice dictionary to the main script
+    # Strip out quotes and keep the title to 180 characters
+    # Sometimes the LLM hallucinates and you get an essay on turtles.
     article_dict = {
         "title": title['response'][:180].replace('"', '').replace("`","").strip(),
     }

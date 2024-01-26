@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import jwt
 import logging
 import os
-from PIL import Image, ImageDraw, ImageOps
+from PIL import Image
 import requests
 import shutil
 
@@ -125,7 +125,7 @@ def process_image(filename):
         # Save the result as a JPG
         watermarked_image.save(jpg_path, "JPEG")
 
-        # Copy associated TXT file to the output directory
+        # Rename and copy associated TXT file to the output directory
         txt_filename = f"{base_filename}.txt"
         txt_path = os.path.join(input_directory, os.path.splitext(filename)[0] + ".txt")
         if os.path.exists(txt_path):
@@ -150,7 +150,7 @@ def process_image(filename):
         else:
             generation_data = ""
 
-        # Article
+        # Generic Article Template:
         article = """
             <p>This image was created with Stable Diffusion.</p>
             <p>If you have any questions, feel free to reach out to us on 
@@ -159,17 +159,17 @@ def process_image(filename):
             they will be presented below for your reference. </i></p>
             <p>Have fun.</p>        
             """
-        # Create a post with local AI
-        post_dict = agent_generate(
+        # Generate a title local AI
+        ai_data_return = agent_generate(
             _image=image_path,
             _gen_info=generation_data
         )
-        logging.info(post_dict)
+        logging.info(ai_data_return)
         tags = ["ai_art"]
-        # Create Ghost post JSON
         tag_line = os.getenv('TAGLINE')
+        # Create Ghost post JSON
         post_data = {
-            "title": post_dict['title'],
+            "title": ai_data_return['title'],
             "tags": tags,
             "html": f"{article}<br/><br/>"
                     f"<p><code>{generation_data}</code></p><br/>"
@@ -177,11 +177,14 @@ def process_image(filename):
             "feature_image": image_url,
             "published_at": image_datestamp
         }
+        # Send it
         posted = add_post(_post_data=post_data)
         if posted:
             logging.info(f"POSTED ARTICLE: {post_title}")
         else:
             logging.info("POST FAILED, SORRY!!")
+
+        # ARCHIVE AND CLEANUP
 
         # Move PNG and TXT files to the archive directory
         src_path_png = os.path.join(input_directory, filename)
@@ -213,7 +216,8 @@ def process_image(filename):
                 os.rmdir(tmp_txt)
         except Exception as e:
             logging.info(f"Error cleaning up file or directory {tmp_txt}: {e}")
-        logging.info("Finished")
+        # On to the next post
+        logging.info(f"Finished with image: {filename}")
     else:
         logging.warning(f"Skipping file {filename}. Not a PNG file.")
 
@@ -231,7 +235,7 @@ def main():
     for filename in os.listdir(input_directory):
         process_image(filename)
 
-    logging.info("Finished")
+    logging.info("Finished Running Script.")
 
 
 if __name__ == "__main__":
