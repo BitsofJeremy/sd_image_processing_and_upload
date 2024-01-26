@@ -26,25 +26,8 @@ model = os.getenv('OLLAMA_MODEL')
 def agent_generate(_image, _gen_info):
     with open(_image, "rb") as image_file:
         image_data = image_file.read()
-
-    article_prompt = f"""
-        TASK:
-        Use the following image generation data for your reference on how the image was created with Stable Diffusion.
-        {_gen_info}
-        write a short engaging blog post about this picture.
-        The blog post must be unique and not cliche. 
-        OUTPUT:
-        text with HTML tags, but limited to only using the <p>, <b>, <h1>, and <h2> tags.
-    """
-    article = generate(
-        model=model,
-        prompt=article_prompt,
-        images=[image_data],
-        stream=False
-    )
-    logging.info(article['response'].lstrip())
     article_title = f"""
-           write a short engaging Instagram caption for this image.
+           write a short Instagram caption for this image.
        """
     title = generate(
         model=model,
@@ -53,27 +36,8 @@ def agent_generate(_image, _gen_info):
         stream=False
     )
     logging.info(title['response'].replace('"','').strip())
-    # TODO Get a consistent answer from the LLM
-    # article_tags = """
-    #            Create five tags for this image
-    #            OUTPUT:
-    #            {'tags': ['ai', 'art']}
-    #        """
-    # tags = generate(
-    #     model=model,
-    #     prompt=article_tags,
-    #     images=[image_data],
-    #     stream=False
-    # )
-    # logging.info(tags['response'])
-    # try:
-    #     tags_formatted = json.loads(tags['response'].lower().replace('\n', '').strip())
-    # except json.decoder.JSONDecodeError as e:
-    #     logging.info(f"Tags FAILED to format {e}")
-    #     tags_formatted = {'tags': []}
+
     article_dict = {
         "title": title['response'][:180].replace('"', '').replace("`","").strip(),
-        "article": article['response'].lstrip(),
-        # "tags": tags_formatted['tags']
     }
     return article_dict
