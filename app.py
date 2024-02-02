@@ -151,7 +151,7 @@ def process_image(filename):
             generation_data = ""
 
         # Generic Article Template:
-        article = """
+        article_end = """
             <p>This image was created with Stable Diffusion.</p>
             <p>If you have any questions, feel free to reach out to us on 
             <a href="https://twitter.com/ephergent">X</a>.</p>    
@@ -164,6 +164,7 @@ def process_image(filename):
             _image=image_path,
             _gen_info=generation_data
         )
+        article = ai_data_return['article']
         logging.info(ai_data_return)
         tags = ["ai_art"]
         tag_line = os.getenv('TAGLINE')
@@ -172,6 +173,7 @@ def process_image(filename):
             "title": ai_data_return['title'],
             "tags": tags,
             "html": f"{article}<br/><br/>"
+                    f"{article_end}<br/>"
                     f"<p><code>{generation_data}</code></p><br/>"
                     f"<p>{tag_line}</p>",
             "feature_image": image_url,
