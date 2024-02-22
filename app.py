@@ -65,6 +65,7 @@ def add_post(_post_data):
                 "html": _post_data["html"],
                 "feature_image": _post_data["feature_image"],
                 "status": "published",
+                "visibility": "members",
                 "published_at": _post_data['published_at']
             }
         ]
