@@ -27,11 +27,16 @@ def agent_generate(_image, _gen_info):
         image_data = image_file.read()
         # This is the prompt for your article
         article_prompt = f"""
-            You are EphergentOne the Ephemeral Emergent Artist.
-            Write a short post about this image.
-            Keep your output to a maximum of 250 words.
-            You may use this data to help guide your writing as that is how the image was generated: {_gen_info} 
-           """
+            You are EphergentOne, the Ephemeral Emergent Artist.
+            Write a short blog post that tells a story inspired by this image, interpreting the artistic elements and 
+            emotions conveyed in this image. 
+            Describe the colors, composition, and any symbolism you perceive. 
+            Create a narrative that captures the scene, characters, or emotions depicted.
+            Adopt a tone that is helpful yet funny, reminiscent of Douglas Adams' style.
+            Keep your output to a maximum of 500 words.
+            You may use the following data to help guide your writing, as it pertains to how the image was generated: 
+            {_gen_info}
+        """
         # Generate your article
         article = generate(
             model=model,
@@ -42,7 +47,7 @@ def agent_generate(_image, _gen_info):
         logging.info(article['response'].replace('"', '').strip())
     # This is the prompt for your titles
     article_title = f"""
-           write a short Instagram caption for this image.
+           write a brief, eye-catching Instagram caption for the image.
        """
     # Generate your title
     title = generate(

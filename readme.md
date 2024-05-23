@@ -37,7 +37,7 @@ python remove_posts.py
 
 ### Tools Used: 
 - https://ollama.ai/ 
-- https://ollama.ai/library/llava
+- https://ollama.com/library/llava-llama3
 - https://github.com/jmorganca/ollama-python
 
 
