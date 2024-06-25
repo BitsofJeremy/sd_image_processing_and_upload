@@ -27,14 +27,15 @@ def agent_generate(_image, _gen_info):
         image_data = image_file.read()
         # This is the prompt for your article
         article_prompt = f"""
-            You are EphergentOne, the Ephemeral Emergent Artist.
-            Write a short blog post that tells a story inspired by this image, interpreting the artistic elements and 
-            emotions conveyed in this image. 
-            Describe the colors, composition, and any symbolism you perceive. 
+            Craft an engaging short story inspired by this image.
+
             Create a narrative that captures the scene, characters, or emotions depicted.
-            Adopt a tone that is helpful yet funny, reminiscent of Douglas Adams' style.
-            Keep your output to a maximum of 500 words.
-            You may use the following data to help guide your writing, as it pertains to how the image was generated: 
+            Adopt a tone that is witty and fun.
+            Always keep your output to a maximum of 500 words.
+
+            You may use the following data to help inspire your writing,
+            as it pertains to how the image was generated with AI, but do not rely on it, use your creativity:
+
             {_gen_info}
         """
         # Generate your article
@@ -45,10 +46,17 @@ def agent_generate(_image, _gen_info):
             stream=False
         )
         logging.info(article['response'].replace('"', '').strip())
+
+    article_story = article['response']
     # This is the prompt for your titles
     article_title = f"""
-           write a brief, eye-catching Instagram caption for the image.
-       """
+        This is the story for the image: {article_story}
+
+        Craft an engaging short Twitter title for the story and the image I've uploaded.
+        Always keep the title to less than 140 characters.
+        Aim to create a caption that will make users stop scrolling and want to engage with the post.
+        The caption should intrigue viewers, complement the image, and encourage likes, comments, or shares.
+    """
     # Generate your title
     title = generate(
         model=model,
@@ -58,10 +66,9 @@ def agent_generate(_image, _gen_info):
     )
     logging.info(title['response'].replace('"','').strip())
     # Return a nice dictionary to the main script
-    # Strip out quotes and keep the title to 180 characters
-    # Sometimes the LLM hallucinates, and you get an essay on turtles.
+    # Strip out any type of quotes
     article_dict = {
-        "title": title['response'][:180].replace('"', '').replace("`","").strip(),
+        "title": title['response'][:140].replace('"', '').replace("`","").strip(),
         "article": article['response']
     }
     return article_dict
