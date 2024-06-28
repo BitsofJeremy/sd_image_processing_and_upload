@@ -7,6 +7,12 @@ WATERMARK_PATH='Add a transparent PNG for a watermark'
 # Sometimes you need a tag line for the end of your posts
 TAGLINE="I Like Turtles"
 
+# LLM Source [local or remote]
+LLM_SOURCE='remote'
+
+# Anthropic Key
+ANTHROPIC_API_KEY="Your Anthropic Key"
+
 # Ollama Model to use for agent
 # llava is used for viewing images and creating nice Instagram like titles
 OLLAMA_MODEL='llava'
