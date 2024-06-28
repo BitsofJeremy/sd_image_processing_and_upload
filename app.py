@@ -1,14 +1,24 @@
+"""
+AI Image Processing and Blog Post Generation
+
+This script automates the process of generating blog posts from images using AI.
+It monitors a directory for new PNG images, uses a Language Model (LLM) to create
+a story and title based on the image, processes the image (resizing and adding
+a watermark), and then uploads it to a Ghost blog as a new post.
+"""
+
+import logging
 from datetime import datetime as date
 from dotenv import load_dotenv
 import jwt
-import logging
 import os
 from PIL import Image
 import requests
 import shutil
 
 # Local Imports
-from agent_blogr import agent_generate
+from agents.agent_ollama import agent_ollama
+from agents.agent_claude import agent_claude
 
 # Set up logging configuration
 logging.basicConfig(
@@ -16,26 +26,25 @@ logging.basicConfig(
     filename='script_log.txt',
     format='%(asctime)s - %(levelname)s - %(message)s',
 )
+logger = logging.getLogger(__name__)
 
-# ###### CONFIG ######
-# Input and output directories
-# Get absolute paths for input and output directories
-input_directory = os.path.abspath(os.getenv('INPUT_DIR'))
-output_directory = os.path.abspath(os.getenv('OUTPUT_DIR'))
-archive_directory = os.path.abspath(os.getenv('ARCHIVE_DIR'))
-# Watermark image path
-watermark_path = os.path.abspath(os.getenv('WATERMARK_PATH'))
-# Ghost API information
-api_token = os.getenv('GHOST_ADMIN_API_KEY')
-blog_domain = os.getenv('GHOST_BLOG_URL')
-api_url = f"https://{blog_domain}/ghost/api/v3/admin"
+# Load environment variables
+load_dotenv()
+
+# Configuration
+INPUT_DIR = os.path.abspath(os.getenv('INPUT_DIR'))
+OUTPUT_DIR = os.path.abspath(os.getenv('OUTPUT_DIR'))
+ARCHIVE_DIR = os.path.abspath(os.getenv('ARCHIVE_DIR'))
+WATERMARK_PATH = os.path.abspath(os.getenv('WATERMARK_PATH'))
+API_TOKEN = os.getenv('GHOST_ADMIN_API_KEY')
+BLOG_DOMAIN = os.getenv('GHOST_BLOG_URL')
+API_URL = f"https://{BLOG_DOMAIN}/ghost/api/v3/admin"
+LLM_SOURCE = os.getenv('LLM_SOURCE')
 
 
 def get_jwt():
-    """ Get JWT from API based on admin key """
-    # Split the key into ID and SECRET
-    id, secret = api_token.split(':')
-    # Prepare header and payload
+    """Generate JWT token for Ghost API authentication."""
+    id, secret = API_TOKEN.split(':')
     iat = int(date.now().timestamp())
     header = {'alg': 'HS256', 'typ': 'JWT', 'kid': id}
     payload = {
@@ -43,210 +52,181 @@ def get_jwt():
         'exp': iat + 5 * 60,
         'aud': '/v3/admin/'
     }
-    # Create the token (including decoding secret)
-    token = jwt.encode(
-        payload,
-        bytes.fromhex(secret),
-        algorithm='HS256',
-        headers=header
-    )
-    # print(token)
+    token = jwt.encode(payload, bytes.fromhex(secret), algorithm='HS256', headers=header)
     return token
 
 
-def add_post(_post_data):
-    """ Post dict to blog admin API """
+def add_post(post_data):
+    """Post data to Ghost blog admin API."""
     jwt_token = get_jwt()
     post_json = {
-        "posts": [
-            {
-                "title": _post_data['title'],
-                "tags": _post_data['tags'],
-                "html": _post_data["html"],
-                "feature_image": _post_data["feature_image"],
-                "status": "published",
-                "visibility": "members",
-                "published_at": _post_data['published_at']
-            }
-        ]
+        "posts": [{
+            "title": post_data['title'],
+            "tags": post_data['tags'],
+            "html": post_data["html"],
+            "feature_image": post_data["feature_image"],
+            "status": "published",
+            "visibility": "members",
+            "published_at": post_data['published_at']
+        }]
     }
-    url = f'{api_url}/posts/?source=html'
+    url = f'{API_URL}/posts/?source=html'
     headers = {
         'Authorization': f'Ghost {jwt_token}',
         "Accept-Version": "v3.0"
     }
-    res = requests.post(url, json=post_json, headers=headers)
-    # response = res.json()
-    logging.info(f"POSTED ARTICLE: {_post_data['title']}")
-    if res.status_code == 201:
+    response = requests.post(url, json=post_json, headers=headers)
+    logger.info(f"API Response: {response.status_code}")
+    if response.status_code == 201:
+        logger.info(f"POSTED ARTICLE: {post_data['title']}")
         return True
     else:
+        logger.error(f"Failed to post article: {post_data['title']}")
         return False
 
 
 def process_image(filename):
     """Process a single image."""
-    if filename.endswith(".png"):
-        # Get the last modification time of the original PNG file
-        image_path = os.path.join(input_directory, filename)
-        image_datestamp = os.path.getmtime(image_path)
-        # Convert Unix timestamp to datetime string in the required format
-        image_datestamp = date.utcfromtimestamp(image_datestamp).strftime('%Y-%m-%dT%H:%M:%S.000Z')
+    logger.info(f"Processing image: {filename}")
+    if not filename.endswith(".png"):
+        logger.warning(f"Skipping file {filename}. Not a PNG file.")
+        return
 
-        # Convert PNG to JPG
-        # Extract the first 16 characters as post title
-        post_title = os.path.splitext(filename)[0][:16]
-        base_filename = f"{post_title}"
+    # Get image details
+    image_path = os.path.join(INPUT_DIR, filename)
+    image_datestamp = date.utcfromtimestamp(os.path.getmtime(image_path)).strftime('%Y-%m-%dT%H:%M:%S.000Z')
+    post_title = os.path.splitext(filename)[0][:16]
+    base_filename = f"{post_title}"
+    jpg_filename = f"{base_filename}.jpeg"
+    jpg_path = os.path.join(OUTPUT_DIR, jpg_filename)
 
-        # JPG filename and path
-        jpg_filename = f"{base_filename}.jpeg"
-        jpg_path = os.path.join(output_directory, jpg_filename)
+    # Process image
+    original_image = Image.open(image_path).convert("RGBA")
+    watermark = Image.open(WATERMARK_PATH).resize((120, 120))
+    watermark_layer = Image.new("RGBA", original_image.size, (0, 0, 0, 0))
+    watermark_layer.paste(watermark, (original_image.width - 120, original_image.height - 120), mask=watermark)
+    watermarked_image = Image.alpha_composite(original_image, watermark_layer)
+    watermarked_image.convert("RGB").save(jpg_path, "JPEG")
+    logger.info(f"Processed image: {jpg_filename}")
 
-        # Open the image and convert to RGBA
-        original_image = Image.open(image_path).convert("RGBA")
+    # Copy associated text file
+    txt_filename = f"{base_filename}.txt"
+    txt_path = os.path.join(INPUT_DIR, os.path.splitext(filename)[0] + ".txt")
+    if os.path.exists(txt_path):
+        shutil.copy(txt_path, os.path.join(OUTPUT_DIR, txt_filename))
+        logger.info(f"Copied associated text file: {txt_filename}")
 
-        # Resize the watermark to 120x120 pixels
-        watermark = Image.open(watermark_path).resize((120, 120))
-
-        # Create a transparent layer for the watermark
-        watermark_layer = Image.new("RGBA", original_image.size, (0, 0, 0, 0))
-
-        # Paste the watermark onto the transparent layer in the bottom right
-        watermark_layer.paste(watermark, (original_image.width - 120, original_image.height - 120), mask=watermark)
-
-        # Convert the original image to RGBA mode
-        original_image = original_image.convert("RGBA")
-
-        # Composite the original image and the watermark layer
-        watermarked_image = Image.alpha_composite(original_image, watermark_layer)
-
-        # Convert the image back to RGB mode before saving as JPEG
-        watermarked_image = watermarked_image.convert("RGB")
-
-        # Save the result as a JPG
-        watermarked_image.save(jpg_path, "JPEG")
-
-        # Rename and copy associated TXT file to the output directory
-        txt_filename = f"{base_filename}.txt"
-        txt_path = os.path.join(input_directory, os.path.splitext(filename)[0] + ".txt")
-        if os.path.exists(txt_path):
-            shutil.copy(txt_path, os.path.join(output_directory, txt_filename))
-
-        # Upload image to Ghost API
-        files = {'file': (jpg_filename, open(jpg_path, 'rb'), 'image/jpeg')}
+    # Upload image to Ghost API
+    with open(jpg_path, 'rb') as img_file:
+        files = {'file': (jpg_filename, img_file, 'image/jpeg')}
         jwt_token = get_jwt()
-        headers = {
-            "Authorization": f"Ghost {jwt_token}",
-            "Accept-Version": "v3.0"
-        }
-        upload_url = f"{api_url}/images/upload/"
+        headers = {"Authorization": f"Ghost {jwt_token}", "Accept-Version": "v3.0"}
+        upload_url = f"{API_URL}/images/upload/"
         response = requests.post(upload_url, headers=headers, files=files)
         image_url = response.json()["images"][0]["url"]
+        logger.info(f"Uploaded image to Ghost API: {image_url}")
 
-        # Read text data from associated text file
-        txt_path = os.path.join(output_directory, os.path.splitext(jpg_filename)[0] + ".txt")
-        if os.path.exists(txt_path):
-            with open(txt_path, 'r') as txt_file:
-                generation_data = txt_file.read()
-        else:
-            generation_data = ""
+    # Read generation data
+    generation_data = ""
+    txt_path = os.path.join(OUTPUT_DIR, os.path.splitext(jpg_filename)[0] + ".txt")
+    if os.path.exists(txt_path):
+        with open(txt_path, 'r') as txt_file:
+            generation_data = txt_file.read()
 
-        # Generic Article Template:
-        article_end = """
-            <p>This image was created with Stable Diffusion.</p>
-            <p>The text above was generated by a local large language model with vision capabilities. </p>
-            <p>If you have any questions, feel free to reach out to us on 
-            <a href="https://twitter.com/ephergent">X</a>.</p>    
-            <p><i>Should there be generation details tied to the image, 
-            they will be presented below for your reference. </i></p>
-            <p>Have fun.</p>
-            """
-        # Generate a title local AI
-        ai_data_return = agent_generate(
-            _image=image_path,
-            _gen_info=generation_data
-        )
-        article = ai_data_return['article']
-        article = article.replace('\n\n', '<br/><br/>')
-        logging.info(ai_data_return)
-        tags = ["ai_art"]
-        tag_line = os.getenv('TAGLINE')
-        # Create Ghost post JSON
-        post_data = {
-            "title": ai_data_return['title'],
-            "tags": tags,
-            "html": f"{article}<br/><br/>"
-                    f"<p>******</p>"
-                    f"{article_end}<br/>"
-                    f"<p>{tag_line}</p>"
-                    f"<p>******</p>"
-                    f"<p><code>{generation_data}</code></p><br/>",
-            "feature_image": image_url,
-            "published_at": image_datestamp
-        }
-        logging.info(post_data)
-        # Send it
-        posted = add_post(_post_data=post_data)
-        if posted:
-            logging.info(f"POSTED ARTICLE: {post_title}")
-        else:
-            logging.info("POST FAILED, SORRY!!")
-
-        # ARCHIVE AND CLEANUP
-
-        # Move PNG and TXT files to the archive directory
-        src_path_png = os.path.join(input_directory, filename)
-        dst_path_png = os.path.join(archive_directory, filename)
-        shutil.move(src_path_png, dst_path_png)
-        logging.info(f"Files moved to archive directory: {filename}")
-
-        # Move associated TXT file to the archive directory
-        src_path_txt = os.path.join(input_directory, os.path.splitext(filename)[0] + ".txt")
-        dst_path_txt = os.path.join(archive_directory, os.path.splitext(filename)[0] + ".txt")
-        if os.path.exists(src_path_txt):
-            shutil.move(src_path_txt, dst_path_txt)
-            logging.info(f"Associated TXT file moved to archive directory: {txt_filename}")
-
-        # Cleanup: Remove remaining files in output_directory
-        try:
-            if os.path.isfile(jpg_path) or os.path.islink(jpg_path):
-                os.unlink(jpg_path)
-            elif os.path.isdir(jpg_path):
-                os.rmdir(jpg_path)
-        except Exception as e:
-            logging.info(f"Error cleaning up file or directory {jpg_path}: {e}")
-
-        tmp_txt = os.path.join(output_directory, os.path.splitext(base_filename)[0] + ".txt")
-        try:
-            if os.path.isfile(tmp_txt) or os.path.islink(tmp_txt):
-                os.unlink(tmp_txt)
-            elif os.path.isdir(tmp_txt):
-                os.rmdir(tmp_txt)
-        except Exception as e:
-            logging.info(f"Error cleaning up file or directory {tmp_txt}: {e}")
-        # On to the next post
-        logging.info(f"Finished with image: {filename}")
+    # Generate content using LLM
+    if LLM_SOURCE == 'local':
+        model = os.getenv('OLLAMA_MODEL')
+        logger.info(f"Using local LLM: {model}")
+        ai_data_return = agent_ollama(image_path, generation_data, model)
+    elif LLM_SOURCE == 'remote':
+        logger.info("Using remote LLM: Claude")
+        ai_data_return = agent_claude(image_path, generation_data)
     else:
-        logging.warning(f"Skipping file {filename}. Not a PNG file.")
+        logger.error(f"Invalid LLM_SOURCE: {LLM_SOURCE}")
+        return
+
+    logger.info("Generated title and article from LLM")
+    logger.debug(f"Raw LLM output: {ai_data_return}")
+
+    # Prepare post data
+    article = ai_data_return['article'].replace('\n\n', '<br/><br/>')
+    article_end = """
+        <p>This image was created with Stable Diffusion.</p>
+        <p>The text above was generated by a large language model with vision capabilities.</p>
+        <p>If you have any questions, feel free to reach out to us on 
+        <a href="https://twitter.com/ephergent">X</a>.</p>    
+        <p><i>Should there be generation details tied to the image, 
+        they will be presented below for your reference.</i></p>
+        <p>Have fun.</p>
+        """
+    tags = ["ai_art"]
+    tag_line = os.getenv('TAGLINE')
+    post_data = {
+        "title": ai_data_return['title'],
+        "tags": tags,
+        "html": f"{article}<br/><br/>"
+                f"<p>******</p>"
+                f"{article_end}<br/>"
+                f"<p>{tag_line}</p>"
+                f"<p>******</p>"
+                f"<p><code>{generation_data}</code></p><br/>",
+        "feature_image": image_url,
+        "published_at": image_datestamp
+    }
+
+    # Post to Ghost
+    posted = add_post(post_data)
+    if posted:
+        logger.info(f"Successfully posted article: {post_title}")
+    else:
+        logger.error(f"Failed to post article: {post_title}")
+
+    # Archive and cleanup
+    src_path_png = os.path.join(INPUT_DIR, filename)
+    dst_path_png = os.path.join(ARCHIVE_DIR, filename)
+    shutil.move(src_path_png, dst_path_png)
+    logger.info(f"Archived original PNG: {filename}")
+
+    src_path_txt = os.path.join(INPUT_DIR, os.path.splitext(filename)[0] + ".txt")
+    dst_path_txt = os.path.join(ARCHIVE_DIR, os.path.splitext(filename)[0] + ".txt")
+    if os.path.exists(src_path_txt):
+        shutil.move(src_path_txt, dst_path_txt)
+        logger.info(f"Archived associated TXT file: {os.path.basename(src_path_txt)}")
+
+    # Cleanup temporary files
+    for temp_file in [jpg_path, os.path.join(OUTPUT_DIR, txt_filename)]:
+        try:
+            os.remove(temp_file)
+            logger.info(f"Removed temporary file: {os.path.basename(temp_file)}")
+        except Exception as e:
+            logger.error(f"Error removing temporary file {temp_file}: {e}")
+
+    logger.info(f"Finished processing image: {filename}")
 
 
 def main():
-    # Check if the output directory exists, create if not
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
+    """Main function to process images and generate blog posts."""
+    logger.info("Starting image processing and upload script")
 
-    # Check if the archive directory exists, create if not
-    if not os.path.exists(archive_directory):
-        os.makedirs(archive_directory)
+    # Ensure required directories exist
+    for directory in [OUTPUT_DIR, ARCHIVE_DIR]:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            logger.info(f"Created directory: {directory}")
 
-    # Loop through PNG images in the input directory
-    for filename in os.listdir(input_directory):
-        process_image(filename)
+    if LLM_SOURCE not in ['local', 'remote']:
+        logger.error(f"Invalid LLM_SOURCE: {LLM_SOURCE}. Please set it to 'local' or 'remote'.")
+        return
 
-    logging.info("Finished Running Script.")
+    logger.info(f"Using LLM source: {LLM_SOURCE}")
+
+    # Process images
+    for filename in os.listdir(INPUT_DIR):
+        if filename.endswith('.png'):
+            process_image(filename)
+
+    logger.info("Finished running script")
 
 
 if __name__ == "__main__":
-    # Load environment variables from the .env file
-    load_dotenv()
     main()
