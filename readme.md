@@ -2,8 +2,11 @@
 
 This Python application automates the process of generating blog posts from Stable Diffusion images using AI. It monitors a directory for new PNG images, uses a Language Model (LLM) to create a story and title based on the image, processes the image (resizing and adding a watermark), and then uploads it to a Ghost blog as a new post.
 
-For more details, read the blog post here:
+For more details, read the original blog post here:
 [Adding AI to my AI Art Workflow with Ollama and a Multimodal LLM](https://bits.jeremyschroeder.net/adding-ai-to-my-ai-art-worklfow-with-ollama-and-a-multimodal-llm/)
+
+Read the new updates here [adding Anthropic Claude to the workflow]:
+[AI-Powered Blog Post Generator: Turning Pixels into Prose with Ollama and Claude](https://bits.jeremyschroeder.net/ai-powered-blog-post-generator-turning-pixels-into-prose-with-ollama-and-claude/)
 
 ## Features
 
