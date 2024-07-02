@@ -8,16 +8,19 @@ For more details, read the blog post here:
 ## Features
 
 - Monitors a directory for new PNG images from Stable Diffusion
-- Uses either a local LLM (via Ollama) or a remote LLM (Claude via Anthropic API) to generate story content and titles
+- Uses either a local LLM (llava-llama3 via Ollama) or a remote LLM (Claude via Anthropic API) to generate story content and titles
 - Processes images: converts PNG to JPEG, resizes, and adds a watermark
 - Uploads processed images and generated content to a Ghost blog
 - Archives processed images and associated files
+- Fallback mechanism: if the remote LLM fails, it falls back to the local LLM
+- Transparency: includes information about which LLM model was used in the blog post
 
 ## Prerequisites
 
 - Python 3.7+
 - Ghost blog instance
-- Ollama (for local LLM) or Anthropic API key (for Claude)
+- Ollama with llava-llama3 model installed (for local LLM)
+- Anthropic API key (for Claude, if using remote LLM option)
 
 ## Installation
 
@@ -43,6 +46,15 @@ For more details, read the blog post here:
    cp .env-example .env
    ```
 
+5. Install Ollama and the llava-llama3 model:
+   ```bash
+   # Install Ollama (if not already installed)
+   curl https://ollama.ai/install.sh | sh
+   
+   # Pull the llava-llama3 model
+   ollama pull llava-llama3
+   ```
+
 ## Configuration
 
 Edit the `.env` file with your specific settings. Here's an example of what it should look like:
@@ -58,14 +70,14 @@ WATERMARK_PATH='Add a transparent PNG for a watermark'
 TAGLINE="I Like Turtles"
 
 # LLM Source [local or remote]
-LLM_SOURCE='remote'
+LLM_SOURCE='local'
 
-# Anthropic Key
+# Anthropic Key and Model (for remote option)
 ANTHROPIC_API_KEY="Your Anthropic Key"
+ANTHROPIC_MODEL="claude-3-5-sonnet-20240620"
 
 # Ollama Model to use for agent
-# llava is used for viewing images and creating nice Instagram like titles
-OLLAMA_MODEL='llava'
+OLLAMA_MODEL='llava-llama3'
 
 # Your Ghost Blog
 GHOST_BLOG_URL='https://example-blog.com'
@@ -98,7 +110,7 @@ python remove_posts.py
 ## Tools Used
 
 - [Ollama](https://ollama.ai/)
-- [LLaVA (Large Language and Vision Assistant)](https://ollama.com/library/llava-llama3)
+- [llava-llama3](https://ollama.com/library/llava-llama3): A LLaVA model fine-tuned from Llama 3 Instruct with better scores in several benchmarks
 - [Ollama Python Client](https://github.com/jmorganca/ollama-python)
 - [Anthropic's Claude API](https://www.anthropic.com) (for remote LLM option)
 

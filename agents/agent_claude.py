@@ -2,7 +2,7 @@
 Agent Claude Module
 
 This module provides functionality to generate stories and titles based on
-input images using the Anthropic API with Claude model.
+input images using the Anthropic API with the specified Claude model.
 """
 
 import logging
@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
+# Get the Anthropic model from environment variable
+ANTHROPIC_MODEL = os.getenv('ANTHROPIC_MODEL')
 
 def agent_claude(_image, _gen_info):
     """
@@ -29,7 +31,7 @@ def agent_claude(_image, _gen_info):
     Returns:
         dict: A dictionary containing the generated title and article.
     """
-    logger.info("Using Anthropic API with Claude")
+    logger.info(f"Using Anthropic API with model: {ANTHROPIC_MODEL}")
 
     # Initialize the Anthropic client
     client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
@@ -64,7 +66,7 @@ def agent_claude(_image, _gen_info):
     """
 
     story_message = client.messages.create(
-        model="claude-3-5-sonnet-20240620",
+        model=ANTHROPIC_MODEL,
         max_tokens=1024,
         messages=[
             {
@@ -102,7 +104,7 @@ def agent_claude(_image, _gen_info):
     """
 
     title_message = client.messages.create(
-        model="claude-3-5-sonnet-20240620",
+        model=ANTHROPIC_MODEL,
         max_tokens=1024,
         messages=[
             {
