@@ -1,3 +1,4 @@
+from datetime import datetime as date
 import os
 from PIL import Image
 from ghost_posting import upload_image_to_ghost, post_to_ghost
