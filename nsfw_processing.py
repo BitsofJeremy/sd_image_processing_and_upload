@@ -13,14 +13,14 @@ def check_nsfw(image_path):
     """Check if an image is NSFW using the best 3 out of 5 approach."""
     nsfw_count = 0
     total_nsfw_score = 0
-    for _ in range(5):
+    for _ in range(6):
         result = nsfw_detect(image_path)
         if result['is_nsfw']:
             nsfw_count += 1
         total_nsfw_score += result['nsfw_score']
 
     is_nsfw = nsfw_count >= 3
-    avg_nsfw_score = total_nsfw_score / 5
+    avg_nsfw_score = total_nsfw_score / 6
     return is_nsfw, avg_nsfw_score
 
 
