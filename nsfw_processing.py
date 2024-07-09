@@ -12,7 +12,7 @@ def check_nsfw(image_path):
     total_nsfw_score = 0
     for _ in range(5):
         result = nsfw_detect(image_path)
-        if result['is_nsfw']:
+        if result['is_nsfw']:  # This now uses the 0.6 threshold
             nsfw_count += 1
         total_nsfw_score += result['nsfw_score']
 
