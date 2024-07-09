@@ -8,21 +8,46 @@ from datetime import datetime, timezone
 # Add this to your environment variables or configuration
 NSFW_WATERMARK_PATH = os.path.abspath(os.getenv('NSFW_WATERMARK_PATH', 'NSFW.png'))
 
-def check_nsfw(image_path):
-    """Check if an image is NSFW using the best 5 out of 10 approach."""
-    print(f"Img: {image_path}")
-    nsfw_count = 0
+
+def check_nsfw(image_path, threshold=0.5, checks=10):
+    """
+    Check if an image is NSFW using multiple checks and a threshold.
+
+    Args:
+    image_path (str): Path to the image file
+    threshold (float): NSFW probability threshold (default: 0.5)
+    checks (int): Number of checks to perform (default: 10)
+
+    Returns:
+    tuple: (is_nsfw, avg_nsfw_score)
+    """
+    print(f"Analyzing image: {image_path}")
     total_nsfw_score = 0
-    for _ in range(10):
+    nsfw_count = 0
+    probabilities = []
+
+    for _ in range(checks):
         result = nsfw_detect(image_path)
-        if result['is_nsfw']:
+        nsfw_prob = result['nsfw_probability']
+        sfw_prob = result['sfw_probability']
+        probabilities.append([sfw_prob, nsfw_prob])
+
+        if nsfw_prob > threshold:
             nsfw_count += 1
-        total_nsfw_score += result['nsfw_score']
-    is_nsfw = nsfw_count >= 5
+        total_nsfw_score += nsfw_prob
+
+    avg_nsfw_score = total_nsfw_score / checks
+    is_nsfw = (nsfw_count / checks) > 0.5  # Majority vote
+
+    print("Individual check probabilities [SFW, NSFW]:")
+    for prob in probabilities:
+        print(f"{prob}")
     print(f"Total NSFW Score: {total_nsfw_score}")
-    avg_nsfw_score = total_nsfw_score / 10
-    print(f"average NSFW Score: {avg_nsfw_score}")
+    print(f"Average NSFW Score: {avg_nsfw_score}")
+    print(f"Is NSFW: {is_nsfw}, Average NSFW Score: {avg_nsfw_score}")
+
     return is_nsfw, avg_nsfw_score
+
 
 def apply_blur(image, nsfw_score):
     """Apply a blur effect to the image based on the NSFW score."""

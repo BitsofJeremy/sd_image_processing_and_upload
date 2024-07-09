@@ -17,7 +17,6 @@ WATERMARK_PATH = os.path.abspath(os.getenv('WATERMARK_PATH'))
 def is_nsfw(image_path):
     """Determine if an image is NSFW using the robust checking method."""
     is_nsfw, avg_nsfw_score = check_nsfw(image_path)
-    print(f"Is NSFW: {is_nsfw}, Average NSFW Score: {avg_nsfw_score}")
     return is_nsfw, avg_nsfw_score
 
 
