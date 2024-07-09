@@ -23,7 +23,7 @@ def check_nsfw(image_path):
 
 def apply_blur(image, nsfw_score):
     """Apply a blur effect to the image based on the NSFW score."""
-    max_blur = 10  # Maximum blur radius
+    max_blur = 20  # Maximum blur radius
     blur_amount = int(nsfw_score * max_blur)
     return image.filter(ImageFilter.GaussianBlur(radius=blur_amount))
 
