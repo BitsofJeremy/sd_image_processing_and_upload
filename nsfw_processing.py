@@ -1,5 +1,6 @@
 import os
 from PIL import Image, ImageFilter
+from nsfw_detector_pytorch import main as nsfw_detect
 from ghost_posting import upload_image_to_ghost, post_to_ghost
 from agents.agent_ollama import agent_ollama
 from datetime import datetime, timezone
