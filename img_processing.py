@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
 import os
+from datetime import datetime, timezone
 from PIL import Image
 from ghost_posting import upload_image_to_ghost, post_to_ghost
 from agents.agent_ollama import agent_ollama
@@ -13,9 +13,8 @@ LLM_SOURCE = os.getenv('LLM_SOURCE')
 ANTHROPIC_MODEL = os.getenv('ANTHROPIC_MODEL')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL')
 
-
-def process_sfw_image(image_path, output_dir, watermark_path):
-    """Process safe image and return path to processed image."""
+def process_image(image_path, output_dir, watermark_path):
+    """Process image and return path to processed image."""
     original_image = Image.open(image_path).convert("RGBA")
     watermark = Image.open(watermark_path).resize((120, 120))
     watermark_layer = Image.new("RGBA", original_image.size, (0, 0, 0, 0))
@@ -27,24 +26,22 @@ def process_sfw_image(image_path, output_dir, watermark_path):
 
     return processed_path
 
-
-def generate_content_sfw(image_path, generation_data):
-    """Generate content for safe image using specified LLM."""
+def generate_content(image_path, generation_data):
+    """Generate content for image using specified LLM."""
     if LLM_SOURCE == 'remote':
         return agent_claude(image_path, generation_data)
     else:
         return agent_ollama(image_path, generation_data, OLLAMA_MODEL)
 
-
-def post_sfw_content(image_path, output_dir, watermark_path, generation_data):
-    """Process safe image and post to Ghost."""
-    processed_path = process_sfw_image(image_path, output_dir, watermark_path)
+def process_and_post_image(image_path, output_dir, watermark_path, generation_data):
+    """Process image and post to Ghost."""
+    processed_path = process_image(image_path, output_dir, watermark_path)
 
     # Upload image to Ghost
     image_url = upload_image_to_ghost(processed_path)
 
     # Generate content
-    content = generate_content_sfw(image_path, generation_data)
+    content = generate_content(image_path, generation_data)
 
     # Prepare post data
     post_data = {

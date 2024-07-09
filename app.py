@@ -1,9 +1,7 @@
 import os
 import shutil
 from dotenv import load_dotenv
-from nsfw_detector_pytorch import main as nsfw_detect
-from nsfw_processing import post_nsfw_content, check_nsfw
-from sfw_processing import post_sfw_content
+from img_processing import process_and_post_image
 
 # Load environment variables
 load_dotenv()
@@ -12,12 +10,6 @@ INPUT_DIR = os.path.abspath(os.getenv('INPUT_DIR'))
 OUTPUT_DIR = os.path.abspath(os.getenv('OUTPUT_DIR'))
 ARCHIVE_DIR = os.path.abspath(os.getenv('ARCHIVE_DIR'))
 WATERMARK_PATH = os.path.abspath(os.getenv('WATERMARK_PATH'))
-
-
-def is_nsfw(image_path):
-    """Determine if an image is NSFW using the robust checking method."""
-    is_nsfw, avg_nsfw_score = check_nsfw(image_path)
-    return is_nsfw, avg_nsfw_score
 
 
 def process_image(filename):
@@ -31,12 +23,8 @@ def process_image(filename):
         with open(txt_path, 'r') as txt_file:
             generation_data = txt_file.read()
 
-    # Check if the image is NSFW
-    nsfw, nsfw_score = is_nsfw(image_path)
-    if nsfw:
-        post_nsfw_content(image_path, OUTPUT_DIR, WATERMARK_PATH, generation_data, nsfw_score)
-    else:
-        post_sfw_content(image_path, OUTPUT_DIR, WATERMARK_PATH, generation_data)
+    # Process and post the image
+    process_and_post_image(image_path, OUTPUT_DIR, WATERMARK_PATH, generation_data)
 
     # Archive processed files
     shutil.move(image_path, os.path.join(ARCHIVE_DIR, filename))
