@@ -1,13 +1,11 @@
 import os
 from PIL import Image, ImageFilter
-from nsfw_detector_pytorch import main as nsfw_detect
 from ghost_posting import upload_image_to_ghost, post_to_ghost
 from agents.agent_ollama import agent_ollama
 from datetime import datetime, timezone
 
 # Add this to your environment variables or configuration
 NSFW_WATERMARK_PATH = os.path.abspath(os.getenv('NSFW_WATERMARK_PATH', 'NSFW.png'))
-
 
 def check_nsfw(image_path):
     """Check if an image is NSFW using the best 5 out of 10 approach."""
@@ -25,13 +23,11 @@ def check_nsfw(image_path):
     print(f"average NSFW Score: {avg_nsfw_score}")
     return is_nsfw, avg_nsfw_score
 
-
 def apply_blur(image, nsfw_score):
     """Apply a blur effect to the image based on the NSFW score."""
     max_blur = 20  # Maximum blur radius
     blur_amount = int(nsfw_score * max_blur)
     return image.filter(ImageFilter.GaussianBlur(radius=blur_amount))
-
 
 def apply_nsfw_watermark(image):
     """Apply NSFW watermark to the image."""
@@ -57,8 +53,7 @@ def apply_nsfw_watermark(image):
     # Composite the watermark layer with the image
     return Image.alpha_composite(image.convert('RGBA'), watermark_layer)
 
-
-def process_nsfw_image(image_path, output_dir, watermark_path):
+def process_nsfw_image(image_path, output_dir, watermark_path, nsfw_score):
     """Process NSFW image and return paths to processed images."""
     original_image = Image.open(image_path).convert("RGBA")
     watermark = Image.open(watermark_path).resize((120, 120))
@@ -71,7 +66,6 @@ def process_nsfw_image(image_path, output_dir, watermark_path):
     watermarked_image.convert("RGB").save(non_blurred_path, "JPEG")
 
     # Apply blur
-    _, nsfw_score = check_nsfw(image_path)
     blurred_image = apply_blur(watermarked_image, nsfw_score)
 
     # Apply NSFW watermark
@@ -83,15 +77,13 @@ def process_nsfw_image(image_path, output_dir, watermark_path):
 
     return non_blurred_path, blurred_path
 
-
 def generate_content_nsfw(image_path, generation_data):
     """Generate content for NSFW image using local LLM."""
     return agent_ollama(image_path, generation_data, os.getenv('OLLAMA_MODEL'))
 
-
-def post_nsfw_content(image_path, output_dir, watermark_path, generation_data):
+def post_nsfw_content(image_path, output_dir, watermark_path, generation_data, nsfw_score):
     """Process NSFW image and post to Ghost."""
-    non_blurred_path, blurred_path = process_nsfw_image(image_path, output_dir, watermark_path)
+    non_blurred_path, blurred_path = process_nsfw_image(image_path, output_dir, watermark_path, nsfw_score)
 
     # Upload both images to Ghost
     non_blurred_url = upload_image_to_ghost(non_blurred_path)
