@@ -2,7 +2,7 @@ input_directory/
 output_directory/
 archive_directory/
 .idea/
-
+.syncthing*
 *.txt
 *.log
 
