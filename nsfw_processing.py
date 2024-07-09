@@ -1,9 +1,12 @@
-from datetime import datetime, timezone
 import os
 from PIL import Image, ImageFilter
 from nsfw_detector_pytorch import main as nsfw_detect
 from ghost_posting import upload_image_to_ghost, post_to_ghost
 from agents.agent_ollama import agent_ollama
+from datetime import datetime, timezone
+
+# Add this to your environment variables or configuration
+NSFW_WATERMARK_PATH = os.path.abspath(os.getenv('NSFW_WATERMARK_PATH', 'NSFW.png'))
 
 
 def check_nsfw(image_path):
@@ -12,7 +15,7 @@ def check_nsfw(image_path):
     total_nsfw_score = 0
     for _ in range(5):
         result = nsfw_detect(image_path)
-        if result['is_nsfw']:  # This now uses the 0.6 threshold
+        if result['is_nsfw']:
             nsfw_count += 1
         total_nsfw_score += result['nsfw_score']
 
@@ -26,6 +29,31 @@ def apply_blur(image, nsfw_score):
     max_blur = 20  # Maximum blur radius
     blur_amount = int(nsfw_score * max_blur)
     return image.filter(ImageFilter.GaussianBlur(radius=blur_amount))
+
+
+def apply_nsfw_watermark(image):
+    """Apply NSFW watermark to the image."""
+    if not os.path.exists(NSFW_WATERMARK_PATH):
+        raise FileNotFoundError(f"NSFW watermark not found at {NSFW_WATERMARK_PATH}")
+
+    watermark = Image.open(NSFW_WATERMARK_PATH).convert("RGBA")
+
+    # Resize watermark to fit the image (e.g., 1/4 of the image size)
+    watermark_size = (image.width // 4, image.height // 4)
+    watermark = watermark.resize(watermark_size, Image.LANCZOS)
+
+    # Create a new transparent layer for the watermark
+    watermark_layer = Image.new('RGBA', image.size, (0, 0, 0, 0))
+
+    # Calculate position (centered)
+    position = ((image.width - watermark.width) // 2,
+                (image.height - watermark.height) // 2)
+
+    # Paste the watermark onto the layer
+    watermark_layer.paste(watermark, position, watermark)
+
+    # Composite the watermark layer with the image
+    return Image.alpha_composite(image.convert('RGBA'), watermark_layer)
 
 
 def process_nsfw_image(image_path, output_dir, watermark_path):
@@ -44,9 +72,12 @@ def process_nsfw_image(image_path, output_dir, watermark_path):
     _, nsfw_score = check_nsfw(image_path)
     blurred_image = apply_blur(watermarked_image, nsfw_score)
 
-    # Save blurred version
+    # Apply NSFW watermark
+    blurred_image_with_watermark = apply_nsfw_watermark(blurred_image)
+
+    # Save blurred version with NSFW watermark
     blurred_path = os.path.join(output_dir, f"blurred_{os.path.basename(image_path)}")
-    blurred_image.convert("RGB").save(blurred_path, "JPEG")
+    blurred_image_with_watermark.convert("RGB").save(blurred_path, "JPEG")
 
     return non_blurred_path, blurred_path
 
