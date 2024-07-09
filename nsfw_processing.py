@@ -10,19 +10,19 @@ NSFW_WATERMARK_PATH = os.path.abspath(os.getenv('NSFW_WATERMARK_PATH', 'NSFW.png
 
 
 def check_nsfw(image_path):
-    """Check if an image is NSFW using the best 3 out of 5 approach."""
-    print(image_path)
+    """Check if an image is NSFW using the best 5 out of 10 approach."""
+    print(f"Img: {image_path}")
     nsfw_count = 0
     total_nsfw_score = 0
-    for _ in range(6):
+    for _ in range(10):
         result = nsfw_detect(image_path)
-        print(result)
         if result['is_nsfw']:
             nsfw_count += 1
         total_nsfw_score += result['nsfw_score']
-    print(total_nsfw_score)
-    is_nsfw = nsfw_count >= 3
-    avg_nsfw_score = total_nsfw_score / 6
+    is_nsfw = nsfw_count >= 5
+    print(f"Total NSFW Score: {total_nsfw_score}")
+    avg_nsfw_score = total_nsfw_score / 10
+    print(f"average NSFW Score: {avg_nsfw_score}")
     return is_nsfw, avg_nsfw_score
 
 

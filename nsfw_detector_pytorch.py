@@ -32,7 +32,7 @@ def main(image_path):
     image_tensor = preprocess_image(image_path)
     probabilities = classify_image(model, image_tensor)
     print(probabilities)
-    is_nsfw = probabilities[1] > 0.6  # Assuming index 1 is NSFW
+    is_nsfw = probabilities[1] > 0.5  # Assuming index 1 is NSFW
     nsfw_score = probabilities[1]
 
     return {
