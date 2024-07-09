@@ -1,4 +1,4 @@
-from datetime import datetime as date
+from datetime import datetime, timezone
 import os
 from PIL import Image, ImageFilter
 from nsfw_detector_pytorch import main as nsfw_detect
@@ -76,7 +76,7 @@ def post_nsfw_content(image_path, output_dir, watermark_path, generation_data):
                 f"<p>This image was created with Stable Diffusion and processed for content moderation.</p>"
                 f"<p>Content generated using local LLM.</p>",
         "feature_image": blurred_url,
-        "published_at": date.utcnow().isoformat()
+        "published_at": datetime.now(timezone.utc).isoformat()
     }
 
     # Post to Ghost

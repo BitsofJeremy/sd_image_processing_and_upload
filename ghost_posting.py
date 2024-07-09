@@ -1,7 +1,7 @@
 import os
 import requests
 import jwt
-from datetime import datetime as date
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -11,10 +11,11 @@ API_TOKEN = os.getenv('GHOST_ADMIN_API_KEY')
 BLOG_DOMAIN = os.getenv('GHOST_BLOG_URL')
 API_URL = f"https://{BLOG_DOMAIN}/ghost/api/v3/admin"
 
+
 def get_jwt():
     """Generate JWT token for Ghost API authentication."""
     id, secret = API_TOKEN.split(':')
-    iat = int(date.now().timestamp())
+    iat = int(datetime.now(timezone.utc).timestamp())
     header = {'alg': 'HS256', 'typ': 'JWT', 'kid': id}
     payload = {
         'iat': iat,
@@ -23,6 +24,7 @@ def get_jwt():
     }
     token = jwt.encode(payload, bytes.fromhex(secret), algorithm='HS256', headers=header)
     return token
+
 
 def upload_image_to_ghost(image_path):
     """Upload an image to Ghost and return the URL."""
@@ -37,9 +39,22 @@ def upload_image_to_ghost(image_path):
         else:
             raise Exception(f"Failed to upload image: {response.text}")
 
+
 def post_to_ghost(post_data):
     """Post data to Ghost blog admin API."""
     jwt_token = get_jwt()
+
+    # Ensure published_at is in the correct format
+    if 'published_at' not in post_data or not post_data['published_at']:
+        published_at = datetime.now(timezone.utc).isoformat()
+    else:
+        # If published_at is provided, ensure it's in the correct format
+        try:
+            published_at = datetime.fromisoformat(post_data['published_at'].replace('Z', '+00:00')).isoformat()
+        except ValueError:
+            # If parsing fails, use current time
+            published_at = datetime.now(timezone.utc).isoformat()
+
     post_json = {
         "posts": [{
             "title": post_data['title'],
@@ -48,7 +63,7 @@ def post_to_ghost(post_data):
             "feature_image": post_data["feature_image"],
             "status": "published",
             "visibility": "members",
-            "published_at": post_data['published_at']
+            "published_at": published_at
         }]
     }
     url = f'{API_URL}/posts/?source=html'

@@ -1,4 +1,4 @@
-from datetime import datetime as date
+from datetime import datetime, timezone
 import os
 from PIL import Image
 from ghost_posting import upload_image_to_ghost, post_to_ghost
@@ -54,7 +54,7 @@ def post_sfw_content(image_path, output_dir, watermark_path, generation_data):
                 f"<p>This image was created with Stable Diffusion.</p>"
                 f"<p>Content generated using {'remote' if LLM_SOURCE == 'remote' else 'local'} LLM.</p>",
         "feature_image": image_url,
-        "published_at": date.utcnow().isoformat()
+        "published_at": datetime.now(timezone.utc).isoformat()
     }
 
     # Post to Ghost
