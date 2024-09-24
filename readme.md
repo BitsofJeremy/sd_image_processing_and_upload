@@ -1,5 +1,7 @@
 # AI Image Processing and Blog Post Generation
 
+***** ARCHIVED REPO *****
+
 This Python application automates the process of generating blog posts from Stable Diffusion images using AI. It monitors a directory for new PNG images, uses a Language Model (LLM) to create a story and title based on the image, processes the image (resizing and adding a watermark), and then uploads it to a Ghost blog as a new post.
 
 For more details, read the original blog post here:
